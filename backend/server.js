@@ -15,11 +15,7 @@ const allowedOrigins = [
   process.env.CLIENT_URL,  // Production frontend URL
 ].filter(Boolean); // Remove undefined values (if CLIENT_URL missing)
 
-app.use(cors({
-  origin: allowedOrigins.length ? allowedOrigins : '*', // Fallback to * if empty
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true,
-}));
+app.use(cors());
 
 // Middleware
 app.use(express.json());
@@ -35,7 +31,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Production: Serve React App
 if (process.env.NODE_ENV === 'production') {
-  const buildPath = path.join(__dirname, '../frontend/dist');
+  const buildPath = path.join(__dirname, "../frontend/Task-Manager/dist");
   app.use(express.static(buildPath));
   app.get('*', (req, res) => {
     res.sendFile(path.join(buildPath, 'index.html'));
