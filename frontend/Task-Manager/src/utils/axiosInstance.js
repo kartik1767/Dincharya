@@ -1,14 +1,10 @@
 import axios from "axios";
-import { BASE_URL } from "./apiPaths";
 
 const axiosInstance = axios.create({
-  baseURL: BASE_URL,  // uses http://localhost:5000 in dev, "" in prod
+  baseURL: "", // Always empty (relative path)
   timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-  withCredentials: true, // <-- Important if using cookies/auth
+  headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
 // Request Interceptor
