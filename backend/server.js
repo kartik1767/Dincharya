@@ -36,7 +36,6 @@ app.use("/api/reports", reportRoutes);
 // Serve uploads (if you use image/file uploads)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Serve React frontend (from ../Task-Manager/build)
 const buildPath = path.join(__dirname, "../Task-Manager/dist");
 app.use(express.static(buildPath));
 
