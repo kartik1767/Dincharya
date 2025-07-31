@@ -9,12 +9,28 @@ const app = express();
 // Connect MongoDB
 connectDB();
 
+// CORS configuration
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://dincharya.onrender.com"
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
+
+// Handle preflight
+app.options("*", cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 
 // Middleware
 app.use(express.json());
@@ -40,7 +56,5 @@ if (process.env.NODE_ENV === 'production') {
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`
-  🚀 Backend running on port ${PORT}
-  `);
+  console.log(`🚀 Backend running on port ${PORT}`);
 });
