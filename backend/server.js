@@ -9,13 +9,12 @@ const app = express();
 // Connect MongoDB
 connectDB();
 
-// CORS Configuration (Dev + Production)
-const allowedOrigins = [
-  'http://localhost:5173', // Vite dev server
-  process.env.CLIENT_URL,  // Production frontend URL
-].filter(Boolean); // Remove undefined values (if CLIENT_URL missing)
-
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 // Middleware
 app.use(express.json());
@@ -43,6 +42,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`
   🚀 Backend running on port ${PORT}
-  🌍 CORS allowed for: ${allowedOrigins.join(', ') || '*'}
   `);
 });
