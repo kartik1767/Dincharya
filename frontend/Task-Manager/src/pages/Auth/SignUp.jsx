@@ -78,7 +78,7 @@ const SignUp = () => {
       if (error.response && error.response.data.message) {
         setError(error.response.data.message);
       } else {
-        setError("Something went wrong. Please try again.");
+        setError("Something went wrong. Please try again!");
       }
     }
   };
