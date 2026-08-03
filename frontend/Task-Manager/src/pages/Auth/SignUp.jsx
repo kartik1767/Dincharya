@@ -21,7 +21,7 @@ const SignUp = () => {
   const {updateUser} = useContext(UserContext)
   const navigate = useNavigate();
 
-  // Handle SignUp Form Submit
+  //Handle SignUp Form Submit
   const handleSignUp = async (e) => {
     e.preventDefault();
 
