@@ -1,5 +1,5 @@
 import React from 'react'
-
+//AvatarGroup component
 const AvatarGroup = ({avatars, maxVisible = 3}) => {
   return (
     <div className="flex items-center">
