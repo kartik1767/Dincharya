@@ -1,6 +1,14 @@
 const Task = require("../models/Task");
 
-// @desc    Get all tasks (Admin: all, User: only assigned tasks)
+const getTaskScope = (user) =>
+  user.role === "admin"
+    ? { createdBy: user._id }
+    : { assignedTo: user._id };
+
+const findAccessibleTask = (user, taskId) =>
+  Task.findOne({ _id: taskId, ...getTaskScope(user) });
+
+// @desc    Get admin-owned tasks or tasks assigned to the user
 // @route   GET /api/tasks/
 // @access  Private
 const getTasks = async (req, res) => {
@@ -12,19 +20,11 @@ const getTasks = async (req, res) => {
       filter.status = status;
     }
 
-    let tasks;
-
-    if (req.user.role === "admin") {
-      tasks = await Task.find(filter).populate(
-        "assignedTo",
-        "name email profileImageUrl"
-      );
-    } else {
-      tasks = await Task.find({ ...filter, assignedTo: req.user._id }).populate(
-        "assignedTo",
-        "name email profileImageUrl"
-      );
-    }
+    const taskScope = getTaskScope(req.user);
+    let tasks = await Task.find({ ...filter, ...taskScope }).populate(
+      "assignedTo",
+      "name email profileImageUrl"
+    );
 
     // Add completed todoChecklist count to each task
     tasks = await Promise.all(
@@ -37,26 +37,21 @@ const getTasks = async (req, res) => {
     );
 
     // Status summary counts
-    const allTasks = await Task.countDocuments(
-      req.user.role === "admin" ? {} : { assignedTo: req.user._id }
-    );
+    const allTasks = await Task.countDocuments(taskScope);
 
     const pendingTasks = await Task.countDocuments({
-      ...filter,
+      ...taskScope,
       status: "Pending",
-      ...(req.user.role !== "admin" && { assignedTo: req.user._id }),
     });
 
     const inProgressTasks = await Task.countDocuments({
-      ...filter,
+      ...taskScope,
       status: "In Progress",
-      ...(req.user.role !== "admin" && { assignedTo: req.user._id }),
     });
 
     const completedTasks = await Task.countDocuments({
-      ...filter,
+      ...taskScope,
       status: "Completed",
-      ...(req.user.role !== "admin" && { assignedTo: req.user._id }),
     });
 
     res.json({
@@ -78,7 +73,7 @@ const getTasks = async (req, res) => {
 // @access  Private
 const getTaskById = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id).populate(
+    const task = await findAccessibleTask(req.user, req.params.id).populate(
       "assignedTo",
       "name email profileImageUrl"
     );
@@ -134,7 +129,7 @@ const createTask = async (req, res) => {
 // @access  Private
 const updateTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await findAccessibleTask(req.user, req.params.id);
 
     if (!task) return res.status(404).json({ message: "Task not found" });
 
@@ -166,7 +161,7 @@ const updateTask = async (req, res) => {
 // @access  Private (Admin)
 const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await findAccessibleTask(req.user, req.params.id);
 
     if (!task) return res.status(404).json({ message: "Task not found" });
 
@@ -182,16 +177,8 @@ const deleteTask = async (req, res) => {
 // @access  Private
 const updateTaskStatus = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await findAccessibleTask(req.user, req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
-
-    const isAssigned = task.assignedTo.some(
-      (userId) => userId.toString() === req.user._id.toString()
-    );
-
-    if (!isAssigned && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Not authorized" });
-    }
 
     task.status = req.body.status || task.status;
 
@@ -213,15 +200,9 @@ const updateTaskStatus = async (req, res) => {
 const updateTaskChecklist = async (req, res) => {
   try {
     const { todoChecklist } = req.body;
-    const task = await Task.findById(req.params.id);
+    const task = await findAccessibleTask(req.user, req.params.id);
 
     if (!task) return res.status(404).json({ message: "Task not found" });
-
-    if (!task.assignedTo.includes(req.user._id) && req.user.role !== "admin") {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to update checklist" });
-    }
 
     task.todoChecklist = todoChecklist; // Replace with updated checklist
 
@@ -259,11 +240,14 @@ const updateTaskChecklist = async (req, res) => {
 // @access  Private
 const getDashboardData = async (req, res) => {
   try {
+    const taskScope = getTaskScope(req.user);
+
     // Fetch statistics
-    const totalTasks = await Task.countDocuments();
-    const pendingTasks = await Task.countDocuments({ status: "Pending" });
-    const completedTasks = await Task.countDocuments({ status: "Completed" });
+    const totalTasks = await Task.countDocuments(taskScope);
+    const pendingTasks = await Task.countDocuments({ ...taskScope, status: "Pending" });
+    const completedTasks = await Task.countDocuments({ ...taskScope, status: "Completed" });
     const overdueTasks = await Task.countDocuments({
+      ...taskScope,
       status: { $ne: "Completed" },
       dueDate: { $lt: new Date() },
     });
@@ -271,6 +255,7 @@ const getDashboardData = async (req, res) => {
     // Ensure all possible statuses are included
     const taskStatuses = ["Pending", "In Progress", "Completed"];
     const taskDistributionRaw = await Task.aggregate([
+      { $match: taskScope },
       {
         $group: {
           _id: "$status",
@@ -289,6 +274,7 @@ const getDashboardData = async (req, res) => {
     // Ensure all priority levels are included
     const taskPriorities = ["Low", "Medium", "High"];
     const taskPriorityLevelsRaw = await Task.aggregate([
+      { $match: taskScope },
       {
         $group: {
           _id: "$priority",
@@ -303,7 +289,7 @@ const getDashboardData = async (req, res) => {
     }, {});
 
     // Fetch recent 10 tasks
-    const recentTasks = await Task.find()
+    const recentTasks = await Task.find(taskScope)
       .sort({ createdAt: -1 })
       .limit(10)
       .select("title status priority dueDate createdAt");

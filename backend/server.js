@@ -1,4 +1,9 @@
 require('dotenv').config();
+const nodeBuffer = require('buffer');
+if (!nodeBuffer.SlowBuffer) {
+  nodeBuffer.SlowBuffer = nodeBuffer.Buffer;
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');

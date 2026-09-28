@@ -11,7 +11,14 @@ router.post("/login", loginUser);         // Login User
 router.get("/profile", protect, getUserProfile);  // Get User Profile
 router.put("/profile", protect, updateUserProfile); // Update Profile
 
-router.post("/upload-image", upload.single("image"), (req, res) => {
+router.post("/upload-image", (req, res, next) => {
+  upload.single("image")(req, res, (error) => {
+    if (!error) return next();
+
+    const status = error.name === "MulterError" || error.statusCode === 400 ? 400 : 500;
+    res.status(status).json({ message: error.message });
+  });
+}, (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
