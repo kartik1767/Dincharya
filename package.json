@@ -1,0 +1,22 @@
+{
+  "name": "dincharya",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm install --prefix backend && npm install --prefix frontend/Task-Manager && npm run build --prefix frontend/Task-Manager",
+    "start": "node backend/server.js",
+    "serve-frontend": "serve frontend/Task-Manager/dist -s"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kartik1767/Dincharya.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kartik1767/Dincharya/issues"
+  },
+  "homepage": "https://github.com/kartik1767/Dincharya#readme",
+  "description": ""
+}
